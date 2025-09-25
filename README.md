@@ -119,3 +119,5 @@ Information Retrieval Using Boolean Model in Python implemented successfully
 
 
 ### Result:
+
+Information Retrieval Using Boolean Model in Python implemented successfull
