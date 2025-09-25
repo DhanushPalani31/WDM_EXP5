@@ -24,70 +24,94 @@ The Boolean model in Information Retrieval (IR) is a fundamental model used for 
 ### Program:
 
     import numpy as np
-    import pandas as pd
-    class BooleanRetrieval:
-        def __init__(self):
-            self.index = {}
-            self.documents_matrix = None
+import pandas as pd
 
-    def index_document(self, doc_id, text):
-        terms = text.lower().split()
-        print("Document -", doc_id, terms)
+class BooleanRetrieval:
+    def __init__(self):
+        self.index = {}
+        self.document_ids = []
+        self.matrix = None
 
-        for term in terms:
-            if term not in self.index:
-                self.index[term] = set()
-            self.index[term].add(doc_id)
+    # Index all documents
+    def index_documents(self, documents):
+        self.document_ids = list(documents.keys())
+        for doc_id, text in documents.items():
+            for term in text.lower().split():
+                self.index.setdefault(term, set()).add(doc_id)
 
-    def create_documents_matrix(self, documents):
+    # Create document-term matrix
+    def create_matrix(self, documents):
         terms = list(self.index.keys())
-        num_docs = len(documents)
-        num_terms = len(terms)
-
-        self.documents_matrix = np.zeros((num_docs, num_terms), dtype=int)
-
+        self.matrix = np.zeros((len(documents), len(terms)), dtype=int)
         for i, (doc_id, text) in enumerate(documents.items()):
-            doc_terms = text.lower().split()
-            for term in doc_terms:
+            for term in text.lower().split():
                 if term in self.index:
-                    term_id = terms.index(term)
-                    self.documents_matrix[i, term_id] = 1
+                    self.matrix[i][terms.index(term)] = 1
+        print("\n📊 Document-Term Matrix:\n")
+        print(pd.DataFrame(self.matrix, index=self.document_ids, columns=terms))
 
-    def print_documents_matrix_table(self):
-        df = pd.DataFrame(self.documents_matrix, columns=self.index.keys())
-        print(df)
+    # Get 0/1 vector for a term
+    def get_vector(self, term):
+        terms = list(self.index.keys())
+        return self.matrix[:, terms.index(term)] if term in terms else np.zeros(len(self.document_ids), dtype=int)
 
-    def print_all_terms(self):
-        print("All terms in the documents:")
-        print(list(self.index.keys()))
+    # Boolean Search with match-case
+    def search(self, query):
+        parts = query.lower().split()
+        result = np.ones(len(self.document_ids), dtype=int)
+        i = 0
+        while i < len(parts):
+            part = parts[i]
+            match part:
+                case "and":
+                    i += 1
+                    continue
+                case "or":
+                    if i + 1 < len(parts):
+                        result = np.logical_or(result, self.get_vector(parts[i + 1])).astype(int)
+                        i += 2
+                    else:
+                        print("⚠️ OR must be followed by a term.")
+                        return []
+                case "not":
+                    if i + 1 < len(parts):
+                        result *= (1 - self.get_vector(parts[i + 1]))
+                        i += 2
+                    else:
+                        print("⚠️ NOT must be followed by a term.")
+                        return []
+                case _:
+                    result *= self.get_vector(part)
+                    i += 1
 
-    def boolean_search(self, query):
-        # TYPE YOUR CODE HERE
+        return [self.document_ids[j] for j, val in enumerate(result) if val == 1]
 
 if __name__ == "__main__":
-    indexer = BooleanRetrieval()
-
     documents = {
-        1: "Python is a programming language",
-        2: "Information retrieval deals with finding information",
-        3: "Boolean models are used in information retrieval"
-    }
+    1: "Python is a programming language",
+    2: "Information retrieval deals with finding information",
+    3: "Boolean models are used in information retrieval"
+}
 
-    for doc_id, text in documents.items():
-        indexer.index_document(doc_id, text)
+br = BooleanRetrieval()
+br.index_documents(documents)
+br.create_matrix(documents)
 
-    indexer.create_documents_matrix(documents)
-    indexer.print_documents_matrix_table()
-    indexer.print_all_terms()
+query = input("\n🔎 Enter your Boolean query: ")
+results = br.search(query)
 
-    query = input("Enter your boolean query: ")
-    results = indexer.boolean_search(query)
-    if results:
-        print(f"Results for '{query}': {results}")
-    else:
-        print("No results found for the query.")
+if results:
+    print(f"\n✅ Documents matching '{query}': {results}")
+else:
+    print(f"\n❌ No documents match '{query}'.")
+
 
 
 ### Output:
+
+<img width="957" height="387" alt="image" src="https://github.com/user-attachments/assets/acb400c5-514b-4375-bd76-e95d50e1feb7" />
+<img width="986" height="435" alt="image" src="https://github.com/user-attachments/assets/34263f94-4059-464a-b4ee-55cd08689339" />
+
+
 
 ### Result:
